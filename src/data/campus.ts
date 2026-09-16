@@ -95,7 +95,102 @@ export interface CampusData {
   destinations: Destination[];
 }
 
-export const CAMPUS = raw as CampusData;
+// ------------------------------------------------------------
+// 現地での修正（下書き）
+//
+// 現地検証モードで直した値は、この端末の localStorage に貯める。
+// 起動時に campus.json へ重ねてから使うので、直した内容が
+// そのまま案内画面にも反映される（保存後にリロードが必要）。
+//
+// 全端末へ反映するには、#/admin/data で書き出したJSONで
+// src/data/campus.json を置き換えて push する。
+// ------------------------------------------------------------
+
+export const DRAFT_KEY = "arnav.draft";
+
+/** 1ノードぶんの上書き。指定した項目だけが campus.json を上書きする */
+export interface NodeOverride {
+  x?: number;
+  y?: number;
+  label?: string;
+  qrPlace?: string;
+  qrFacing?: number | null;
+  landmark?: string;
+}
+
+export interface Draft {
+  /** campus.json の version と一致しない下書きは無視する */
+  version: number;
+  planUpBearing?: number;
+  nodes: Record<string, NodeOverride>;
+  updatedAt: string;
+}
+
+export function emptyDraft(version: number): Draft {
+  return { version, nodes: {}, updatedAt: new Date().toISOString() };
+}
+
+export function loadDraft(): Draft | null {
+  try {
+    const text = localStorage.getItem(DRAFT_KEY);
+    if (!text) return null;
+    const d = JSON.parse(text) as Draft;
+    // 版が違う下書きは構造が合わない可能性があるので捨てる
+    if (d.version !== (raw as CampusData).version) return null;
+    if (!d.nodes) d.nodes = {};
+    return d;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDraft(draft: Draft): void {
+  draft.updatedAt = new Date().toISOString();
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+}
+
+export function clearDraft(): void {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+/** campus.json に下書きを重ねる */
+export function applyDraft(base: CampusData, draft: Draft | null): CampusData {
+  if (!draft) return base;
+
+  const merged: CampusData = {
+    ...base,
+    meta: {
+      ...base.meta,
+      planUpBearing: draft.planUpBearing ?? base.meta.planUpBearing,
+    },
+    nodes: base.nodes.map((n) => {
+      const o = draft.nodes[n.id];
+      if (!o) return n;
+      const next: CampusNode = { ...n };
+      if (o.x !== undefined) next.x = o.x;
+      if (o.y !== undefined) next.y = o.y;
+      if (o.label !== undefined) next.label = o.label;
+      if (o.landmark !== undefined) {
+        next.landmark = o.landmark ? { text: o.landmark } : undefined;
+      }
+      if (next.qr && (o.qrPlace !== undefined || o.qrFacing !== undefined)) {
+        next.qr = {
+          place: o.qrPlace ?? next.qr.place,
+          facing: o.qrFacing !== undefined ? o.qrFacing : next.qr.facing,
+        };
+      }
+      // 現地で直した箇所は図面由来と区別する
+      if (o.x !== undefined || o.y !== undefined) next.source = "survey";
+      return next;
+    }),
+  };
+  return merged;
+}
+
+export const CAMPUS = applyDraft(raw as CampusData, loadDraft());
+
+/** 下書きを当てていない、図面そのままのデータ（照合の基準に使う） */
+export const CAMPUS_PLAN = raw as CampusData;
 
 /** ノードIDから引くための索引 */
 export const NODES: Map<string, CampusNode> = new Map(

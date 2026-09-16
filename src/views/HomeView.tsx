@@ -126,7 +126,7 @@ export default function HomeView({
       </p>
 
       <div className="foot-links">
-        <a href="#/plan">平面図・データ確認</a>
+        <a href="#/admin">管理モード</a>
       </div>
     </>
   );

@@ -1,30 +1,42 @@
 // ============================================================
 // アプリ本体：ハッシュベースの画面切り替えと現在地の管理
-//   #/                    ホーム（目的地選択）
-//   #/scan                QRスキャン
-//   #/at/<nodeId>         QR読み取り後の着地点（現在地を確定）
-//   #/go/<from>/<to>      道案内（ARカメラ／手順リスト）
-//   #/plan                平面図プレビュー（管理・検証用）
 //
-// 現在地と「選択中の目的地」は sessionStorage に持つ。
+//   来校者
+//     #/                  ホーム（行き先の選択）
+//     #/scan              QRスキャン
+//     #/at/<nodeId>       QR読み取り後の着地点（現在地を確定）
+//     #/go/<from>/<to>    道案内（ARカメラ／手順リスト）
+//
+//   管理（PINで保護。来校者の誤操作を防ぐためのもので、秘匿目的ではない）
+//     #/admin             メニュー
+//     #/admin/verify      方位の検証
+//     #/admin/nodes       地点の編集
+//     #/admin/plan        平面図・区間一覧
+//     #/admin/qr          掲示用QRコード
+//     #/admin/data        データの書き出し・取り込み
+//
+// 現在地と「選択中の行き先」は sessionStorage に持つ。
 // リロードやQR読み取りによる画面遷移をまたいでも消えないようにするため。
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { NODES } from "./data/campus";
 import HomeView from "./views/HomeView";
 import ScanView from "./views/ScanView";
 import GuideView from "./views/GuideView";
-import PlanView from "./views/PlanView";
-import QrPrintView from "./views/QrPrintView";
+import AdminHome, { isAdminUnlocked } from "./views/admin/AdminHome";
+import VerifyView from "./views/admin/VerifyView";
+import NodesView from "./views/admin/NodesView";
+import PlanView from "./views/admin/PlanView";
+import QrPrintView from "./views/admin/QrPrintView";
+import DataView from "./views/admin/DataView";
 
 type Route =
   | { view: "home" }
   | { view: "scan" }
   | { view: "at"; id: string }
   | { view: "go"; from: string; to: string }
-  | { view: "plan" }
-  | { view: "qr" };
+  | { view: "admin"; page: string };
 
 const KEY_CURRENT = "arnav.current";
 const KEY_PENDING = "arnav.pendingDest";
@@ -43,10 +55,8 @@ function parseHash(hash: string): Route {
       return parts[1] && parts[2]
         ? { view: "go", from: parts[1], to: parts[2] }
         : { view: "home" };
-    case "plan":
-      return { view: "plan" };
-    case "qr":
-      return { view: "qr" };
+    case "admin":
+      return { view: "admin", page: parts[1] ?? "" };
     default:
       return { view: "home" };
   }
@@ -64,6 +74,8 @@ export default function App() {
   const [pendingId, setPendingId] = useState<string | null>(() =>
     sessionStorage.getItem(KEY_PENDING),
   );
+  // PIN解除など、stateに載らない変化で描き直したいとき用
+  const [, force] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(location.hash));
@@ -111,6 +123,13 @@ export default function App() {
     setPendingId(null);
   };
 
+  const homeProps = {
+    onSelectDest: selectDest,
+    onScan: () => go("#/scan"),
+    onSetCurrent: setCurrent,
+    onClearCurrent: clearCurrent,
+  };
+
   let body: React.ReactNode;
 
   switch (route.view) {
@@ -130,13 +149,7 @@ export default function App() {
     case "at": {
       const node = NODES.get(route.id);
       body = node ? (
-        <HomeView
-          currentId={node.id}
-          onSelectDest={selectDest}
-          onScan={() => go("#/scan")}
-          onSetCurrent={setCurrent}
-          onClearCurrent={clearCurrent}
-        />
+        <HomeView currentId={node.id} {...homeProps} />
       ) : (
         <div className="card">
           <p className="lead">
@@ -164,24 +177,35 @@ export default function App() {
       );
       break;
 
-    case "plan":
-      body = <PlanView />;
+    case "admin": {
+      if (!isAdminUnlocked()) {
+        body = <AdminHome onUnlock={force} />;
+        break;
+      }
+      switch (route.page) {
+        case "verify":
+          body = <VerifyView />;
+          break;
+        case "nodes":
+          body = <NodesView />;
+          break;
+        case "plan":
+          body = <PlanView />;
+          break;
+        case "qr":
+          body = <QrPrintView />;
+          break;
+        case "data":
+          body = <DataView />;
+          break;
+        default:
+          body = <AdminHome onUnlock={force} />;
+      }
       break;
-
-    case "qr":
-      body = <QrPrintView />;
-      break;
+    }
 
     default:
-      body = (
-        <HomeView
-          currentId={currentId}
-          onSelectDest={selectDest}
-          onScan={() => go("#/scan")}
-          onSetCurrent={setCurrent}
-          onClearCurrent={clearCurrent}
-        />
-      );
+      body = <HomeView currentId={currentId} {...homeProps} />;
   }
 
   return (

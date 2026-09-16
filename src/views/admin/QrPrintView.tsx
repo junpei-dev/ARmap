@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { qrNodes, qrUrlFor, type CampusNode } from "../data/campus";
+import { qrNodes, qrUrlFor, type CampusNode } from "../../data/campus";
 
 export default function QrPrintView() {
   const nodes = qrNodes();
@@ -87,8 +87,8 @@ export default function QrPrintView() {
       </div>
 
       <div className="foot-links no-print">
-        <a href="#/">ホームへ戻る</a>
-        <a href="#/plan">平面図・データ確認</a>
+        <a href="#/admin">管理メニューへ</a>
+        <a href="#/admin/plan">平面図・区間一覧</a>
       </div>
     </>
   );

@@ -6,9 +6,9 @@
 // ============================================================
 
 import { useState } from "react";
-import { CAMPUS, NODES, validateCampus } from "../data/campus";
-import { bearingOf, compassLabel, distanceOf } from "../lib/geo";
-import FloorPlan from "../components/FloorPlan";
+import { CAMPUS, NODES, validateCampus } from "../../data/campus";
+import { bearingOf, compassLabel, distanceOf } from "../../lib/geo";
+import FloorPlan from "../../components/FloorPlan";
 
 export default function PlanView() {
   const floors = [...new Set(CAMPUS.nodes.map((n) => n.floor))].sort();
@@ -117,8 +117,8 @@ export default function PlanView() {
       </div>
 
       <div className="foot-links">
-        <a href="#/">ホームへ戻る</a>
-        <a href="#/qr">掲示用QRコード</a>
+        <a href="#/admin">管理メニューへ</a>
+        <a href="#/admin/qr">掲示用QRコード</a>
       </div>
     </>
   );
