@@ -124,6 +124,105 @@ export function findPath(fromId: string, toId: string): string[] | null {
   return path;
 }
 
+// ------------------------------------------------------------
+// 廊下の軸
+//
+// 現地で方位を測るとき、短い区間を1本ずつ測るのは意味がないうえ精度も悪い。
+// 同じ直線上に並ぶ区間はまとめて1本の「廊下」として扱い、
+// その端から端（いちばん遠い2点）を狙って測れるようにする。
+//
+// 10m先の目標を1m外すと約6度ずれるが、50m先なら約1度で済む。
+// 遠くを狙うほど正確になるので、軸は長いほどよい。
+// ------------------------------------------------------------
+
+export interface CorridorAxis {
+  id: string;
+  fromId: string;
+  toId: string;
+  /** 途中にある地点（狙う対象ではない） */
+  viaIds: string[];
+  bearing: number;
+  length: number;
+  floor: number;
+}
+
+/** 同一直線とみなす方位の許容差（度） */
+const AXIS_TOLERANCE = 5;
+
+/**
+ * 経路グラフから廊下の直線区間を抽出する。
+ * 方位がほぼ同じで繋がっている区間を1本にまとめ、その両端を返す。
+ */
+export function corridorAxes(): CorridorAxis[] {
+  const edges = CAMPUS.edges.filter(
+    (e) => e.kind === "corridor" || e.kind === "bridge",
+  );
+  const used = new Set<number>();
+  const axes: CorridorAxis[] = [];
+
+  edges.forEach((seed, i) => {
+    if (used.has(i)) return;
+    const sa = NODES.get(seed.from);
+    const sb = NODES.get(seed.to);
+    if (!sa || !sb) return;
+
+    const baseBearing = bearingOf(sa, sb, UP);
+    const chain = [i];
+    used.add(i);
+    const nodeIds = new Set([seed.from, seed.to]);
+
+    // 同じ向き（または真逆）で繋がっている区間を、伸びなくなるまで足していく
+    let grew = true;
+    while (grew) {
+      grew = false;
+      edges.forEach((e, j) => {
+        if (used.has(j)) return;
+        if (!nodeIds.has(e.from) && !nodeIds.has(e.to)) return;
+        const a = NODES.get(e.from);
+        const b = NODES.get(e.to);
+        if (!a || !b) return;
+        const d = Math.abs(angleDiff(baseBearing, bearingOf(a, b, UP)));
+        if (d < AXIS_TOLERANCE || d > 180 - AXIS_TOLERANCE) {
+          used.add(j);
+          chain.push(j);
+          nodeIds.add(e.from);
+          nodeIds.add(e.to);
+          grew = true;
+        }
+      });
+    }
+
+    // 端点＝この鎖の中で1回しか現れないノード
+    const degree = new Map<string, number>();
+    for (const k of chain) {
+      const e = edges[k];
+      degree.set(e.from, (degree.get(e.from) ?? 0) + 1);
+      degree.set(e.to, (degree.get(e.to) ?? 0) + 1);
+    }
+    const ends = [...degree.entries()]
+      .filter(([, v]) => v === 1)
+      .map(([id]) => id);
+    if (ends.length !== 2) return; // 枝分かれしている場合は扱わない
+
+    const p = NODES.get(ends[0]);
+    const q = NODES.get(ends[1]);
+    if (!p || !q) return;
+
+    axes.push({
+      id: `${p.id}|${q.id}`,
+      fromId: p.id,
+      toId: q.id,
+      viaIds: [...nodeIds].filter((id) => id !== p.id && id !== q.id),
+      bearing: bearingOf(p, q, UP),
+      length: distanceOf(p, q),
+      floor: p.floor,
+    });
+  });
+
+  // 長い軸ほど測りやすいので先頭に出す
+  return axes.sort((a, b) => b.length - a.length);
+}
+
 /** 経路上の1区間（マージ前） */
 interface Segment {
   fromId: string;

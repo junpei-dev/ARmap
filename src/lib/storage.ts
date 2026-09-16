@@ -16,9 +16,9 @@ export interface Measurement {
   id: string;
   /** 記録日時（ISO8601） */
   at: string;
-  /** edge = 区間の進行方位 / qr = QRを正面に見た向き */
-  kind: "edge" | "qr";
-  /** 区間なら "from|to"、QRならノードID */
+  /** axis = 廊下の軸方位 / qr = QRを正面に見た向き */
+  kind: "axis" | "qr";
+  /** 廊下なら "from|to"、QRならノードID */
   targetId: string;
   label: string;
   /** 図面から計算した方位。QRのfacingには基準が無いので null */
@@ -74,15 +74,15 @@ export function spreadOf(samples: number[]): number {
 }
 
 /**
- * 区間の測定結果から planUpBearing の補正量を求める。
- * 全区間が同じだけずれていれば、それは図面全体の回転ずれなので、
+ * 廊下の測定結果から planUpBearing の補正量を求める。
+ * どの廊下も同じだけずれていれば、それは図面全体の回転ずれなので、
  * 差の中央値を planUpBearing に足せば一斉に直る。
  */
 export function suggestPlanUpCorrection(
   list: Measurement[],
 ): { correction: number; count: number; spread: number } | null {
   const diffs = list
-    .filter((m) => m.kind === "edge" && m.diff !== null)
+    .filter((m) => m.kind === "axis" && m.diff !== null)
     .map((m) => m.diff as number);
   if (diffs.length === 0) return null;
 
@@ -114,7 +114,7 @@ export function measurementsToCsv(list: Measurement[]): string {
   ];
   const rows = list.map((m) => [
     m.at,
-    m.kind === "edge" ? "区間の方位" : "QRの正面",
+    m.kind === "axis" ? "廊下の方位" : "QRの正面",
     m.label,
     m.planBearing === null ? "" : m.planBearing.toFixed(1),
     m.measured.toFixed(1),

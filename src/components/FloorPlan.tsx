@@ -15,11 +15,21 @@ interface Props {
   path?: string[];
   /** 図の高さ(px)。既定は内容に合わせる */
   height?: number;
+  /** 現地測定の照準：ここに立つ */
+  aimFrom?: string;
+  /** 現地測定の照準：こちらを向く */
+  aimTo?: string;
 }
 
 const PAD = 6; // 図の余白（メートル）
 
-export default function FloorPlan({ floor = 1, path, height = 520 }: Props) {
+export default function FloorPlan({
+  floor = 1,
+  path,
+  height = 520,
+  aimFrom,
+  aimTo,
+}: Props) {
   const nodes = CAMPUS.nodes.filter((n) => n.floor === floor);
   if (nodes.length === 0) {
     return <p className="lead">{floor}階のデータはまだありません。</p>;
@@ -133,6 +143,64 @@ export default function FloorPlan({ floor = 1, path, height = 520 }: Props) {
               </g>
             );
           })}
+
+          {/* 現地測定の照準：ここに立って、こちらを向く */}
+          {(() => {
+            const a = aimFrom ? NODES.get(aimFrom) : undefined;
+            const b = aimTo ? NODES.get(aimTo) : undefined;
+            if (!a || !b || a.floor !== floor) return null;
+            // 矢印の先端は目標の手前で止める（目標マークと重ねない）
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const ux = dx / len;
+            const uy = dy / len;
+            const tipX = b.x - ux * 2.4;
+            const tipY = b.y - uy * 2.4;
+            const headL = 2.6;
+            const headW = 1.5;
+            const bx = tipX - ux * headL;
+            const by = tipY - uy * headL;
+            const px = -uy * headW;
+            const py = ux * headW;
+            return (
+              <g>
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={bx}
+                  y2={by}
+                  stroke="#dc2626"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
+                <polygon
+                  points={`${tipX},${tipY} ${bx + px},${by + py} ${bx - px},${by - py}`}
+                  fill="#dc2626"
+                />
+                {/* 立つ位置 */}
+                <circle
+                  cx={a.x}
+                  cy={a.y}
+                  r="2.4"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="0.8"
+                />
+                <circle cx={a.x} cy={a.y} r="1.2" fill="#dc2626" />
+                {/* 狙う先 */}
+                <circle
+                  cx={b.x}
+                  cy={b.y}
+                  r="2.2"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="0.8"
+                  strokeDasharray="1 0.8"
+                />
+              </g>
+            );
+          })()}
 
           {/* 方位（図面の上が向いている実方位） */}
           <g transform={`translate(${minX + 3} ${minY + 4})`}>

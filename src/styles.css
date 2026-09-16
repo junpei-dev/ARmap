@@ -776,3 +776,21 @@ textarea.verify-select {
   color: var(--text-sub);
   margin-bottom: 4px;
 }
+
+/* 測定時の照準図（狭い画面でも全体が見えるように縮める） */
+.aim-plan {
+  margin-bottom: 12px;
+}
+
+.aim-plan .plan-wrap {
+  padding: 8px;
+}
+
+.aim-plan svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.aim-plan .plan-legend {
+  display: none;
+}

@@ -1,11 +1,13 @@
 // ============================================================
 // 現地検証：方位の実測と照合（管理用 #/admin/verify）
 //
-// 図面から計算した方位と、その場で実測した方位の差を記録する。
-// ゼロから測るのではなく「答え合わせ」をするための画面。
+// 測る対象は「廊下の軸」。短い区間を1本ずつ測っても同じ廊下を
+// 測り直しているだけで、しかも近い目標ほど角度がぶれる。
+//   10m先の目標を1m外すと約6度、50m先なら約1度のずれ。
+// そのため同一直線上の区間はまとめ、いちばん遠い端どうしを狙わせる。
 //
-// 区間の測定が何本か貯まると、差の中央値から planUpBearing の
-// 補正量を提案する。図面全体の回転ずれは、この1つの値で一斉に直る。
+// 狙うのは廊下の突き当たりであって、途中の部屋の入口ではない。
+// 部屋を向くと廊下の軸から90度ずれるので、必ず図で示す。
 // ============================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +19,8 @@ import {
   qrNodes,
   saveDraft,
 } from "../../data/campus";
-import { angleDiff, bearingOf, circularMedian, compassLabel } from "../../lib/geo";
+import { angleDiff, circularMedian, compassLabel } from "../../lib/geo";
+import { corridorAxes } from "../../lib/route";
 import {
   addMeasurement,
   deleteMeasurement,
@@ -27,8 +30,9 @@ import {
   type Measurement,
 } from "../../lib/storage";
 import { useCompass } from "../../lib/compass";
+import FloorPlan from "../../components/FloorPlan";
 
-type Mode = "edge" | "qr";
+type Mode = "axis" | "qr";
 
 /** サンプリング時間（ミリ秒）。短いと磁気の揺れを拾う */
 const SAMPLE_MS = 3000;
@@ -36,14 +40,20 @@ const SAMPLE_MS = 3000;
 interface Target {
   id: string;
   label: string;
+  /** 立つ位置 */
+  fromId: string;
+  /** 狙う先 */
+  toId: string;
   planBearing: number | null;
+  length: number;
+  floor: number;
 }
 
 export default function VerifyView() {
   const up = CAMPUS.meta.planUpBearing;
   const { heading, status, accuracy, start } = useCompass();
 
-  const [mode, setMode] = useState<Mode>("edge");
+  const [mode, setMode] = useState<Mode>("axis");
   const [targetId, setTargetId] = useState<string>("");
   const [phase, setPhase] = useState<"idle" | "sampling" | "done">("idle");
   const [left, setLeft] = useState(0);
@@ -57,28 +67,44 @@ export default function VerifyView() {
 
   const samplesRef = useRef<number[]>([]);
 
-  // 方位の候補（区間 or QR）
+  // 測定対象。廊下は両方向とも出す（立っている場所でどちらを向くかが変わる）
   const targets: Target[] = (() => {
     if (mode === "qr") {
       return qrNodes().map((n) => ({
         id: n.id,
-        label: `${n.label}（QRの正面）`,
+        label: `${n.label}のQR`,
+        fromId: n.id,
+        toId: n.id,
         planBearing: null,
+        length: 0,
+        floor: n.floor,
       }));
     }
-    return CAMPUS.edges
-      .filter((e) => e.kind === "corridor" || e.kind === "bridge")
-      .map((e): Target | null => {
-        const a = NODES.get(e.from);
-        const b = NODES.get(e.to);
-        if (!a || !b) return null;
-        return {
-          id: `${e.from}|${e.to}`,
-          label: `${a.label} → ${b.label}`,
-          planBearing: bearingOf(a, b, up),
-        };
-      })
-      .filter((t): t is Target => t !== null);
+    return corridorAxes().flatMap((ax): Target[] => {
+      const a = NODES.get(ax.fromId);
+      const b = NODES.get(ax.toId);
+      if (!a || !b) return [];
+      return [
+        {
+          id: `${ax.fromId}|${ax.toId}`,
+          label: `${a.label} に立ち → ${b.label} を向く`,
+          fromId: ax.fromId,
+          toId: ax.toId,
+          planBearing: ax.bearing,
+          length: ax.length,
+          floor: ax.floor,
+        },
+        {
+          id: `${ax.toId}|${ax.fromId}`,
+          label: `${b.label} に立ち → ${a.label} を向く`,
+          fromId: ax.toId,
+          toId: ax.fromId,
+          planBearing: (ax.bearing + 180) % 360,
+          length: ax.length,
+          floor: ax.floor,
+        },
+      ];
+    });
   })();
 
   const target = targets.find((t) => t.id === targetId) ?? targets[0];
@@ -89,6 +115,12 @@ export default function VerifyView() {
       samplesRef.current.push(heading);
     }
   }, [heading, phase]);
+
+  const reset = () => {
+    setResult(null);
+    setPhase("idle");
+    setMsg(null);
+  };
 
   const startSampling = () => {
     if (heading === null) {
@@ -107,7 +139,7 @@ export default function VerifyView() {
       const s = samplesRef.current;
       if (s.length === 0) {
         setPhase("idle");
-        setMsg("方位の値が1つも取れませんでした。端末を少し動かしてから再試行してください。");
+        setMsg("方位の値が取れませんでした。端末を少し動かしてから再試行してください。");
         return;
       }
       setResult({
@@ -141,20 +173,20 @@ export default function VerifyView() {
     setList(next);
     setResult(null);
     setPhase("idle");
-    setMsg("記録しました。");
+    setMsg("記録しました。同じ廊下を2〜3回測ると精度が上がります。");
   };
 
   /** QRの正面方位を、そのノードの facing として下書きに保存する */
   const saveAsFacing = () => {
     if (!result || !target || mode !== "qr") return;
     const draft = loadDraft() ?? emptyDraft(CAMPUS.version);
-    draft.nodes[target.id] = {
-      ...draft.nodes[target.id],
+    draft.nodes[target.fromId] = {
+      ...draft.nodes[target.fromId],
       qrFacing: Math.round(result.median * 10) / 10,
     };
     saveDraft(draft);
     setMsg(
-      `${NODES.get(target.id)?.label ?? target.id} の facing を ${Math.round(
+      `${NODES.get(target.fromId)?.label ?? target.fromId} の facing を ${Math.round(
         result.median,
       )}° として保存しました。反映にはリロードが必要です。`,
     );
@@ -183,8 +215,10 @@ export default function VerifyView() {
       <div className="card">
         <h2>方位の検証</h2>
         <p className="lead" style={{ marginBottom: 0 }}>
-          進行方向（またはQRの正面）を向いて測り、図面の計算値と突き合わせます。
-          区間を何本か測ると、図面全体のずれを補正できます。
+          廊下の中心に立ち、<strong>廊下の突き当たり</strong>を向いて測ります。
+          途中の部屋の入口を向くと90°ずれるので注意してください。
+          <br />
+          遠くを狙うほど正確になります（10m先を1m外すと約6°、50m先なら約1°）。
         </p>
       </div>
 
@@ -226,23 +260,21 @@ export default function VerifyView() {
       <div className="card">
         <div className="verify-tabs">
           <button
-            className={mode === "edge" ? "verify-tab is-on" : "verify-tab"}
+            className={mode === "axis" ? "verify-tab is-on" : "verify-tab"}
             onClick={() => {
-              setMode("edge");
+              setMode("axis");
               setTargetId("");
-              setResult(null);
-              setPhase("idle");
+              reset();
             }}
           >
-            区間の方位
+            廊下の方位
           </button>
           <button
             className={mode === "qr" ? "verify-tab is-on" : "verify-tab"}
             onClick={() => {
               setMode("qr");
               setTargetId("");
-              setResult(null);
-              setPhase("idle");
+              reset();
             }}
           >
             QRの正面
@@ -254,8 +286,7 @@ export default function VerifyView() {
           value={target?.id ?? ""}
           onChange={(e) => {
             setTargetId(e.target.value);
-            setResult(null);
-            setPhase("idle");
+            reset();
           }}
         >
           {targets.map((t) => (
@@ -265,15 +296,32 @@ export default function VerifyView() {
           ))}
         </select>
 
-        {target?.planBearing !== null && target?.planBearing !== undefined && (
-          <p className="verify-plan">
-            図面の計算値：<strong>{Math.round(target.planBearing)}°</strong>（
-            {compassLabel(target.planBearing)}）
-          </p>
+        {mode === "axis" && target && (
+          <>
+            <p className="verify-plan">
+              図面の計算値：<strong>{Math.round(target.planBearing ?? 0)}°</strong>（
+              {compassLabel(target.planBearing ?? 0)}）／
+              狙う先まで <strong>{target.length.toFixed(1)}m</strong>
+            </p>
+            <div className="aim-plan">
+              <FloorPlan
+                floor={target.floor}
+                height={300}
+                aimFrom={target.fromId}
+                aimTo={target.toId}
+              />
+            </div>
+            <p className="step-meta">
+              赤い丸の位置に立ち、矢印の向きに体を向けてください。
+            </p>
+          </>
         )}
+
         {mode === "qr" && (
           <p className="verify-plan">
-            QRを正面に見て立ち、その向きを測ります（図面には基準がありません）。
+            QRを掲示する位置に立ち、QRを正面に見たときの向きを測ります。
+            <br />
+            まだQRを貼っていない場合は、掲示予定の場所に立って測ってください。
           </p>
         )}
 
@@ -306,12 +354,13 @@ export default function VerifyView() {
                 {Math.abs(diff) <= 15
                   ? "　ほぼ一致"
                   : Math.abs(diff) <= 45
-                    ? "　ずれあり"
-                    : "　大きくずれています。向きを間違えていませんか"}
+                    ? "　ずれあり。補正の対象になります"
+                    : "　大きすぎます。廊下ではなく部屋を向いていませんか"}
               </p>
             )}
             <p className="step-meta">
               {result.count}回のサンプル／ばらつき {Math.round(result.spread)}°
+              {result.spread > 30 && "（端末が動いていた可能性があります）"}
             </p>
 
             <div className="ar-card-row">
@@ -335,7 +384,7 @@ export default function VerifyView() {
         <div className="card">
           <h2>図面全体のずれ</h2>
           <p className="lead">
-            区間 {suggestion.count} 本の測定から、差の中央値は{" "}
+            廊下 {suggestion.count} 回の測定から、差の中央値は{" "}
             <strong>
               {suggestion.correction > 0 ? "+" : ""}
               {Math.round(suggestion.correction)}°
@@ -353,17 +402,22 @@ export default function VerifyView() {
                 <strong>
                   {Math.round((((up + suggestion.correction) % 360) + 360) % 360)}°
                 </strong>{" "}
-                に補正すると、全区間の方位が一斉に合います。
+                に補正すると、全ルートの方位が一斉に合います。
               </p>
               <button className="btn btn-primary" onClick={applyCorrection}>
                 この補正を適用する
               </button>
             </>
           )}
+          {suggestion.count < 3 && (
+            <p className="step-meta">
+              まだ {suggestion.count} 回です。3回以上測ってから補正するほうが安全です。
+            </p>
+          )}
           {suggestion.spread > 40 && (
             <p className="ar-warn">
               測定値のばらつきが大きすぎます（{Math.round(suggestion.spread)}°）。
-              向きを取り違えた記録が混じっていないか、一覧を確認してください。
+              向きを取り違えた記録が混じっていないか、下の一覧を確認してください。
             </p>
           )}
         </div>
