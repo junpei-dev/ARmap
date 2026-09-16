@@ -290,7 +290,7 @@
 | 既存資産の扱い | school-nav の設計は破棄。ゼロベースで再構築 | 2026-09-09 |
 | 案内先の数 | まず3か所。余力があれば追加 | 2026-09-09 |
 | ホスティング | Cloudflare Pages | 2026-09-09 |
-| 公開URL | https://nobeko-map.pages.dev/ （変更不可） | 2026-09-09 |
+| 公開URL | https://armap.201536-teacher.workers.dev/ （変更不可） | 2026-09-09 |
 | リポジトリ | tokorobot/ARmap を流用（main ブランチ） | 2026-09-09 |
 
 ---

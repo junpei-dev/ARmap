@@ -487,7 +487,7 @@ function turnInstruction(prev: number, next: number): string {
 ### 9.2 URL形式
 
 ```
-https://nobeko-map.pages.dev/#/at/n001
+https://armap.201536-teacher.workers.dev/#/at/n001
 ```
 
 **このURLは後から変えられない**（印刷して掲示するため）。
@@ -532,7 +532,7 @@ A4に2枚。ラミネート推奨。
      Framework preset : Vite
      Build command    : npm run build
      Build output dir : dist
-4. https://nobeko-map.pages.dev で公開
+4. https://armap.201536-teacher.workers.dev で公開
 ```
 
 `vite.config.ts` の `base` は `"/"`（Pages はルート配信）。

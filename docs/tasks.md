@@ -37,7 +37,7 @@
 | P0-2 | プロジェクト初期化（Vite + React + TS） | `npm run dev` でページが表示される | 30分 |
 | P0-3 | GitHub リポジトリ整理 | main に push できる | 20分 |
 | P0-4 | Cloudflare Pages 接続 | push すると自動デプロイされ、URLで開ける | 40分 |
-| P0-5 | 公開URLの確定 | ✅ `nobeko-map.pages.dev` に確定（`docs/qr-map.md`） | 完了 |
+| P0-5 | 公開URLの確定 | ✅ `armap.201536-teacher.workers.dev` に確定（`docs/qr-map.md`） | 完了 |
 | P0-6 | スマホ実機で公開URLを開けることを確認 | iPhone・Android両方でアクセスできる | 10分 |
 
 > **P0-5 は後戻り不可。** QRを印刷した後にドメインを変えると全部貼り替えになる。

@@ -7,11 +7,12 @@
 ## 公開URL（確定・変更不可）
 
 ```
-https://nobeko-map.pages.dev/
+https://armap.201536-teacher.workers.dev/
 ```
 
-- 確定日: 2026-09-09
-- ホスティング: Cloudflare Pages（GitHub連携・`main` ブランチを自動ビルド）
+- 確定日: 2026-09-16
+- ホスティング: Cloudflare Workers（GitHub連携・`main` ブランチを自動ビルド）
+  ※ `pages.dev` ではなく `workers.dev`。学校ネットワークのプロキシ越しに到達できることを確認済み
 - リポジトリ: https://github.com/junpei-dev/ARmap （旧 tokorobot/ARmap から移動）
 
 > **警告**: QRコードにはこのアドレスが焼き込まれます。
@@ -21,7 +22,7 @@ https://nobeko-map.pages.dev/
 ## QRのURL形式
 
 ```
-https://nobeko-map.pages.dev/#/at/<ノードID>
+https://armap.201536-teacher.workers.dev/#/at/<ノードID>
 ```
 
 ノードIDは `campus.json` の `nodes[].id`。**一度掲示したIDは絶対に変更しない。**
@@ -60,4 +61,4 @@ https://nobeko-map.pages.dev/#/at/<ノードID>
 
 | 日付 | 内容 |
 |---|---|
-| 2026-09-09 | 公開URLを `nobeko-map.pages.dev` に確定 |
+| 2026-09-09 | 公開URLを `armap.201536-teacher.workers.dev` に確定 |
