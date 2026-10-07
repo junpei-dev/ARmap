@@ -14,6 +14,7 @@ import {
 import {
   angleDiff,
   bearingOf,
+  normalizeDeg,
   compassLabel,
   distanceOf,
   formatDistance,
@@ -420,8 +421,10 @@ export function buildGuide(fromId: string, toId: string): Guide | null {
   const arriveBearing = last?.bearing ?? 0;
   const destName = displayNameOf(to);
   let arriveText = `${destName}に到着します`;
-  if (last && to.entranceBearing !== undefined) {
-    const side = sideOf(last.bearing, to.entranceBearing);
+  if (last && to.entrancePlanAngle !== undefined) {
+    // 図面基準の角度を実方位に直してから左右を判定する
+    const entrance = normalizeDeg(to.entrancePlanAngle + UP);
+    const side = sideOf(last.bearing, entrance);
     arriveText =
       side === "正面" ? `正面が${destName}です` : `${side}が${destName}です`;
   }

@@ -73,7 +73,7 @@ export default function VerifyView() {
     if (mode === "qr") {
       return qrNodes().map((n) => ({
         id: n.id,
-        label: `${n.label}のQR`,
+        label: `${n.floor}階 ${n.label}のQR`,
         fromId: n.id,
         toId: n.id,
         planBearing: null,
@@ -88,7 +88,7 @@ export default function VerifyView() {
       return [
         {
           id: `${ax.fromId}|${ax.toId}`,
-          label: `${a.label} に立ち → ${b.label} を向く`,
+          label: `${ax.floor}階 ${a.label} → ${b.label}`,
           fromId: ax.fromId,
           toId: ax.toId,
           planBearing: ax.bearing,
@@ -97,7 +97,7 @@ export default function VerifyView() {
         },
         {
           id: `${ax.toId}|${ax.fromId}`,
-          label: `${b.label} に立ち → ${a.label} を向く`,
+          label: `${ax.floor}階 ${b.label} → ${a.label}`,
           fromId: ax.toId,
           toId: ax.fromId,
           planBearing: (ax.bearing + 180) % 360,

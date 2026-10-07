@@ -41,11 +41,17 @@ export interface CampusNode {
   y: number;
   source: CoordSource;
   /**
-   * 部屋の入口が廊下から見てどちらにあるかの実方位。
+   * 部屋の入口が、図面上でどちらを向いているか（図面の上を0度、時計回り）。
    * 到着時の「右手が職員室です」の判定に使う。
-   * 延岡工業の管理棟は部屋が図面の左側に並ぶので 225 度（南西）。
+   *
+   * 実方位ではなく図面基準で持つのは、planUpBearing を補正したときに
+   * 自動で追従させるため。実方位で持つと補正のたびにずれていく。
+   *   実方位 = entrancePlanAngle + planUpBearing
+   *
+   * 管理棟は部屋が廊下の左に並ぶので 270（図面の左）。
+   * 廊下の突き当たりにある部屋は 0（図面の上）。
    */
-  entranceBearing?: number;
+  entrancePlanAngle?: number;
   /** QRを掲示するノードのみ */
   qr?: {
     /** 掲示場所のメモ */

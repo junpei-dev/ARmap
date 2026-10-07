@@ -109,6 +109,12 @@ export default function AdminHome({ onUnlock }: Props) {
               現地で方位を測り、図面の計算値と照合する
             </span>
           </a>
+          <a className="btn" href="#/admin/notes">
+            <span className="dest-name">現地メモ</span>
+            <span className="dest-note">
+              図面から読めないこと（図書館への動線など）を書き留める
+            </span>
+          </a>
           <a className="btn" href="#/admin/nodes">
             <span className="dest-name">地点の編集</span>
             <span className="dest-note">

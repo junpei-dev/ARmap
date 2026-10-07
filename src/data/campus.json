@@ -34,7 +34,7 @@
         "place": "事務室窓口の前（掲示位置は現地で決定）",
         "facing": null
       },
-      "entranceBearing": 225
+      "entrancePlanAngle": 270
     },
     {
       "id": "n002",
@@ -45,7 +45,7 @@
       "x": 8.4,
       "y": 45.1,
       "source": "plan",
-      "entranceBearing": 225
+      "entrancePlanAngle": 270
     },
     {
       "id": "n003",
@@ -60,7 +60,7 @@
         "place": "職員室入口の脇（掲示位置は現地で決定）",
         "facing": null
       },
-      "entranceBearing": 225
+      "entrancePlanAngle": 270
     },
     {
       "id": "n004",
@@ -95,7 +95,7 @@
         "place": "保健室入口の脇（掲示位置は現地で決定）",
         "facing": null
       },
-      "entranceBearing": 225
+      "entrancePlanAngle": 270
     },
     {
       "id": "n007",
@@ -116,7 +116,7 @@
       "x": 8.4,
       "y": 4.8,
       "source": "plan",
-      "entranceBearing": 225
+      "entrancePlanAngle": 270
     },
     {
       "id": "n009",
@@ -134,6 +134,77 @@
       "kind": "stair",
       "building": "b1",
       "floor": 1,
+      "x": 11.5,
+      "y": 25.35,
+      "source": "plan"
+    },
+    {
+      "id": "n011",
+      "label": "会議室前",
+      "kind": "room",
+      "building": "b1",
+      "floor": 2,
+      "x": 8.4,
+      "y": 4.75,
+      "source": "plan",
+      "entrancePlanAngle": 0
+    },
+    {
+      "id": "n012",
+      "label": "放送室前",
+      "kind": "corner",
+      "building": "b1",
+      "floor": 2,
+      "x": 8.4,
+      "y": 11.74,
+      "source": "plan"
+    },
+    {
+      "id": "n013",
+      "label": "選択教室前",
+      "kind": "corner",
+      "building": "b1",
+      "floor": 2,
+      "x": 8.4,
+      "y": 18.49,
+      "source": "plan"
+    },
+    {
+      "id": "n014",
+      "label": "便所前（2階）",
+      "kind": "corner",
+      "building": "b1",
+      "floor": 2,
+      "x": 8.4,
+      "y": 25.24,
+      "source": "plan"
+    },
+    {
+      "id": "n015",
+      "label": "棟の接続部（2階）",
+      "kind": "corner",
+      "building": "b1",
+      "floor": 2,
+      "x": 8.4,
+      "y": 29.49,
+      "source": "plan"
+    },
+    {
+      "id": "n016",
+      "label": "階段（接続部）",
+      "kind": "stair",
+      "building": "b1",
+      "floor": 2,
+      "x": 3.6,
+      "y": 29.6,
+      "source": "plan"
+    },
+    {
+      "id": "n017",
+      "label": "階段（ホール脇）",
+      "kind": "stair",
+      "building": "b1",
+      "floor": 2,
       "x": 11.5,
       "y": 25.35,
       "source": "plan"
@@ -184,6 +255,48 @@
       "from": "n005",
       "to": "n010",
       "kind": "door"
+    },
+    {
+      "from": "n011",
+      "to": "n012",
+      "kind": "corridor"
+    },
+    {
+      "from": "n012",
+      "to": "n013",
+      "kind": "corridor"
+    },
+    {
+      "from": "n013",
+      "to": "n014",
+      "kind": "corridor"
+    },
+    {
+      "from": "n014",
+      "to": "n015",
+      "kind": "corridor"
+    },
+    {
+      "from": "n015",
+      "to": "n016",
+      "kind": "door"
+    },
+    {
+      "from": "n014",
+      "to": "n017",
+      "kind": "door"
+    },
+    {
+      "from": "n009",
+      "to": "n016",
+      "kind": "stair",
+      "floorChange": 1
+    },
+    {
+      "from": "n010",
+      "to": "n017",
+      "kind": "stair",
+      "floorChange": 1
     }
   ],
   "destinations": [
@@ -200,16 +313,23 @@
       "order": 2
     },
     {
+      "nodeId": "n011",
+      "displayName": "会議室",
+      "category": "事務",
+      "order": 3,
+      "note": "2階です"
+    },
+    {
       "nodeId": "n002",
       "displayName": "校長室",
       "category": "事務",
-      "order": 3
+      "order": 4
     },
     {
       "nodeId": "n008",
       "displayName": "進路指導室",
       "category": "事務",
-      "order": 4
+      "order": 5
     }
   ]
 }

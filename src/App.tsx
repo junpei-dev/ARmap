@@ -30,6 +30,7 @@ import NodesView from "./views/admin/NodesView";
 import PlanView from "./views/admin/PlanView";
 import QrPrintView from "./views/admin/QrPrintView";
 import DataView from "./views/admin/DataView";
+import NotesView from "./views/admin/NotesView";
 
 type Route =
   | { view: "home" }
@@ -188,6 +189,9 @@ export default function App() {
           break;
         case "nodes":
           body = <NodesView />;
+          break;
+        case "notes":
+          body = <NotesView />;
           break;
         case "plan":
           body = <PlanView />;

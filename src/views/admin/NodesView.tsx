@@ -62,7 +62,7 @@ export default function NodesView() {
         >
           {CAMPUS.nodes.map((n) => (
             <option key={n.id} value={n.id}>
-              {n.label}
+              {n.floor}階 {n.label}
               {n.qr ? "（QR）" : ""}
               {draft?.nodes[n.id] ? " ✎" : ""}
             </option>

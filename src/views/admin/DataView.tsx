@@ -19,7 +19,9 @@ import {
   clearMeasurements,
   downloadFile,
   loadMeasurements,
+  loadNotes,
   measurementsToCsv,
+  notesToText,
 } from "../../lib/storage";
 
 function stamp(): string {
@@ -36,6 +38,7 @@ export default function DataView() {
   const draft = loadDraft();
   const draftCount = draft ? Object.keys(draft.nodes).length : 0;
   const measurements = loadMeasurements();
+  const notes = loadNotes();
 
   const exportCampus = () => {
     // 現地の修正を当てた状態のデータをそのまま書き出す
@@ -117,7 +120,8 @@ export default function DataView() {
           {draft?.planUpBearing !== undefined &&
             `（planUpBearing を ${draft.planUpBearing}° に補正中）`}
           <br />
-          測定記録 <strong>{measurements.length}</strong> 件
+          測定記録 <strong>{measurements.length}</strong> 件／現地メモ{" "}
+          <strong>{notes.length}</strong> 件
           {draft && (
             <>
               <br />
@@ -146,6 +150,16 @@ export default function DataView() {
             disabled={measurements.length === 0}
           >
             測定記録をCSVで書き出す（{measurements.length} 件）
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              downloadFile(`notes-${stamp()}.txt`, notesToText(notes));
+              setMsg("現地メモを書き出しました。");
+            }}
+            disabled={notes.length === 0}
+          >
+            現地メモをテキストで書き出す（{notes.length} 件）
           </button>
         </div>
       </div>

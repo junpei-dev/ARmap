@@ -215,6 +215,76 @@ export function measurementsToCsv(list: Measurement[]): string {
   );
 }
 
+// ------------------------------------------------------------
+// 現地メモ
+//
+// 図面から読めないこと（棟のつながり方、実際にどう歩くか、見える目印）を
+// その場で書き留めるための記録欄。経路データにする前の素材として使う。
+//
+// 写真は localStorage の容量（数MB）を超えやすいので保存しない。
+// 撮ったらその場で端末へダウンロードし、ここにはファイル名だけ残す。
+// ------------------------------------------------------------
+
+const NOTES_KEY = "arnav.notes";
+
+export interface FieldNote {
+  id: string;
+  at: string;
+  /** 何についてのメモか（例: 図書館への動線） */
+  title: string;
+  body: string;
+  /** 撮影してダウンロードした写真のファイル名（本体は端末に保存される） */
+  photoNames?: string[];
+}
+
+export function loadNotes(): FieldNote[] {
+  try {
+    const text = localStorage.getItem(NOTES_KEY);
+    if (!text) return [];
+    const list = JSON.parse(text) as FieldNote[];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveNotes(list: FieldNote[]): void {
+  localStorage.setItem(NOTES_KEY, JSON.stringify(list));
+}
+
+export function addNote(note: FieldNote): FieldNote[] {
+  const list = [...loadNotes(), note];
+  saveNotes(list);
+  return list;
+}
+
+export function updateNote(id: string, changes: Partial<FieldNote>): FieldNote[] {
+  const list = loadNotes().map((n) => (n.id === id ? { ...n, ...changes } : n));
+  saveNotes(list);
+  return list;
+}
+
+export function deleteNote(id: string): FieldNote[] {
+  const list = loadNotes().filter((n) => n.id !== id);
+  saveNotes(list);
+  return list;
+}
+
+/** 持ち帰って読む用のテキスト */
+export function notesToText(list: FieldNote[]): string {
+  if (list.length === 0) return "（メモはありません）\r\n";
+  return list
+    .map((n) => {
+      const when = new Date(n.at).toLocaleString("ja-JP");
+      const photos =
+        n.photoNames && n.photoNames.length > 0
+          ? `\r\n写真: ${n.photoNames.join(" / ")}`
+          : "";
+      return `■ ${n.title}\r\n${when}\r\n${n.body}${photos}\r\n`;
+    })
+    .join("\r\n");
+}
+
 /** ブラウザからファイルとして保存させる */
 export function downloadFile(
   filename: string,
