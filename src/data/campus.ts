@@ -82,6 +82,11 @@ export interface CampusMeta {
   school: string;
   /** 図面の上方向が向いている実方位（北=0度）。現地検証で補正する */
   planUpBearing: number;
+  /**
+   * planUpBearing をどう決めたかの記録。
+   * この1つの値で全ルートの方位が決まるため、根拠を残しておく。
+   */
+  planUpBearingNote?: string;
   source: string;
   updatedAt: string;
 }
