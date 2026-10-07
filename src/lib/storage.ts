@@ -37,6 +37,13 @@ export interface Measurement {
    * 「補正済みの値にさらに同じ補正を足す」二重補正が起きる。
    */
   planUpAtMeasure?: number;
+  /**
+   * この記録を planUpBearing の補正に使った日時。
+   * 一度使った記録は再提案に使わない。campus.json を手で書き戻すなどして
+   * planUpBearing が元の値に戻ると、同じ記録が再び有効になって
+   * 同じ補正を二度当ててしまうため。
+   */
+  usedForCorrectionAt?: string;
   note?: string;
 }
 
@@ -71,6 +78,16 @@ export function clearMeasurements(): void {
   localStorage.removeItem(KEY);
 }
 
+/** 補正に使った記録へ印をつける（再利用を防ぐ） */
+export function markUsedForCorrection(ids: string[]): Measurement[] {
+  const at = new Date().toISOString();
+  const list = loadMeasurements().map((m) =>
+    ids.includes(m.id) ? { ...m, usedForCorrectionAt: at } : m,
+  );
+  saveMeasurements(list);
+  return list;
+}
+
 /** サンプル列のばらつき（最大と最小の角度差）。円環なので単純な差は使えない */
 export function spreadOf(samples: number[]): number {
   if (samples.length < 2) return 0;
@@ -91,17 +108,21 @@ export function suggestPlanUpCorrection(
   correction: number;
   count: number;
   spread: number;
-  /** 別の planUpBearing のときに測ったため除外した件数 */
+  /** 別の planUpBearing のときに測った、または既に補正へ使ったため除外した件数 */
   stale: number;
+  /** 計算に使った記録のID */
+  ids: string[];
 } | null {
   const axes = list.filter((m) => m.kind === "axis" && m.diff !== null);
-  // 現在の planUpBearing のもとで測ったものだけを使う（二重補正の防止）
-  const usable = axes.filter((m) => m.planUpAtMeasure === currentPlanUp);
+  // 現在の planUpBearing のもとで測り、まだ補正に使っていないものだけを使う
+  const usable = axes.filter(
+    (m) => m.planUpAtMeasure === currentPlanUp && !m.usedForCorrectionAt,
+  );
   const stale = axes.length - usable.length;
   const diffs = usable.map((m) => m.diff as number);
   if (diffs.length === 0) {
     return stale > 0
-      ? { correction: 0, count: 0, spread: 0, stale }
+      ? { correction: 0, count: 0, spread: 0, stale, ids: [] }
       : null;
   }
 
@@ -116,6 +137,7 @@ export function suggestPlanUpCorrection(
     count: diffs.length,
     spread: Math.max(...sorted) - Math.min(...sorted),
     stale,
+    ids: usable.map((m) => m.id),
   };
 }
 

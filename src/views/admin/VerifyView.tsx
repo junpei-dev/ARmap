@@ -26,6 +26,7 @@ import {
   checkReciprocal,
   deleteMeasurement,
   loadMeasurements,
+  markUsedForCorrection,
   spreadOf,
   suggestPlanUpCorrection,
   type Measurement,
@@ -209,6 +210,8 @@ export default function VerifyView() {
     const draft = loadDraft() ?? emptyDraft(CAMPUS.version);
     draft.planUpBearing = Math.round(nextUp * 10) / 10;
     saveDraft(draft);
+    // 使った記録に印をつけ、同じ補正が二度当たらないようにする
+    setList(markUsedForCorrection(suggestion.ids));
     if (
       confirm(
         `planUpBearing を ${up}° → ${draft.planUpBearing}° に変更しました。\n` +
@@ -394,8 +397,8 @@ export default function VerifyView() {
           <h2>図面全体のずれ</h2>
           <p className="lead" style={{ marginBottom: 0 }}>
             記録のうち {suggestion.stale} 件は、いまと違う planUpBearing
-            のときに測ったものです（補正を当てる前の記録）。
-            二重に補正してしまうため、計算から除いています。
+            のときに測ったか、すでに補正へ使った記録です。
+            同じ補正を二度当ててしまうため、計算から除いています。
             <br />
             いまの {up}° が正しいか確かめるには、
             <strong>もう一度この状態で測り直してください。</strong>
@@ -439,8 +442,8 @@ export default function VerifyView() {
           )}
           {suggestion.stale > 0 && (
             <p className="step-meta">
-              補正前に測った {suggestion.stale} 件は、二重補正を避けるため
-              計算から除いています（記録とCSVには残ります）。
+              {suggestion.stale} 件は、補正前に測ったか既に補正へ使った記録です。
+              二重補正を避けるため計算から除いています（記録とCSVには残ります）。
             </p>
           )}
           {suggestion.spread > 40 && (
