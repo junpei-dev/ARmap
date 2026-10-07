@@ -794,3 +794,28 @@ textarea.verify-select {
 .aim-plan .plan-legend {
   display: none;
 }
+
+/* 往復整合性のバッジ */
+.recip-badge {
+  flex: none;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recip-badge.is-ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.recip-badge.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.recip-badge.is-bad {
+  background: #fee2e2;
+  color: #b91c1c;
+}

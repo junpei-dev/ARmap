@@ -23,6 +23,7 @@ import { angleDiff, circularMedian, compassLabel } from "../../lib/geo";
 import { corridorAxes } from "../../lib/route";
 import {
   addMeasurement,
+  checkReciprocal,
   deleteMeasurement,
   loadMeasurements,
   spreadOf,
@@ -169,6 +170,7 @@ export default function VerifyView() {
       samples: result.count,
       spread: result.spread,
       diff,
+      planUpAtMeasure: up,
     });
     setList(next);
     setResult(null);
@@ -192,7 +194,14 @@ export default function VerifyView() {
     );
   };
 
-  const suggestion = suggestPlanUpCorrection(list);
+  const suggestion = suggestPlanUpCorrection(list, up);
+  const reciprocals = checkReciprocal(list);
+  // 往復で測った廊下があるか（無ければ系統誤差を検出できない）
+  const measuredAxisIds = new Set(
+    list.filter((m) => m.kind === "axis").map((m) => m.targetId),
+  );
+  const hasOneWayOnly =
+    measuredAxisIds.size > 0 && reciprocals.length === 0;
 
   const applyCorrection = () => {
     if (!suggestion) return;
@@ -380,7 +389,21 @@ export default function VerifyView() {
       </div>
 
       {/* 補正の提案 */}
-      {suggestion && (
+      {suggestion && suggestion.count === 0 && (
+        <div className="card">
+          <h2>図面全体のずれ</h2>
+          <p className="lead" style={{ marginBottom: 0 }}>
+            記録のうち {suggestion.stale} 件は、いまと違う planUpBearing
+            のときに測ったものです（補正を当てる前の記録）。
+            二重に補正してしまうため、計算から除いています。
+            <br />
+            いまの {up}° が正しいか確かめるには、
+            <strong>もう一度この状態で測り直してください。</strong>
+          </p>
+        </div>
+      )}
+
+      {suggestion && suggestion.count > 0 && (
         <div className="card">
           <h2>図面全体のずれ</h2>
           <p className="lead">
@@ -414,11 +437,69 @@ export default function VerifyView() {
               まだ {suggestion.count} 回です。3回以上測ってから補正するほうが安全です。
             </p>
           )}
+          {suggestion.stale > 0 && (
+            <p className="step-meta">
+              補正前に測った {suggestion.stale} 件は、二重補正を避けるため
+              計算から除いています（記録とCSVには残ります）。
+            </p>
+          )}
           {suggestion.spread > 40 && (
             <p className="ar-warn">
               測定値のばらつきが大きすぎます（{Math.round(suggestion.spread)}°）。
               向きを取り違えた記録が混じっていないか、下の一覧を確認してください。
             </p>
+          )}
+        </div>
+      )}
+
+      {/* 往復の整合性 */}
+      {(reciprocals.length > 0 || hasOneWayOnly) && (
+        <div className="card">
+          <h2>往復の整合性</h2>
+          {hasOneWayOnly ? (
+            <p className="lead" style={{ marginBottom: 0 }}>
+              まだ片方向しか測っていません。
+              <strong>同じ廊下を逆向きにも測ってください。</strong>
+              <br />
+              往復の値は本来ちょうど180°違うはずで、そこからのずれが
+              磁場の歪みを示します。同じ場所で何回測っても、この誤差は見つけられません。
+            </p>
+          ) : (
+            <>
+              <p className="lead">
+                往路と復路の差が180°からどれだけ外れているかを見ます。
+                ずれが小さいほど、その廊下の磁場は素直です。
+              </p>
+              <ul className="verify-list">
+                {reciprocals.map((r, i) => (
+                  <li key={i}>
+                    <div>
+                      <p className="verify-list-label">{r.label}</p>
+                      <p className="step-meta">
+                        往路 {Math.round(r.forward)}° ／ 復路{" "}
+                        {Math.round(r.backward)}°
+                      </p>
+                    </div>
+                    <span
+                      className={
+                        Math.abs(r.error) <= 10
+                          ? "recip-badge is-ok"
+                          : Math.abs(r.error) <= 25
+                            ? "recip-badge is-warn"
+                            : "recip-badge is-bad"
+                      }
+                    >
+                      {r.error > 0 ? "+" : ""}
+                      {Math.round(r.error)}°
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="step-meta">
+                10°以内なら良好。25°を超える場合は、その廊下に鉄骨や分電盤など
+                磁場を乱すものがないか確認してください。
+              </p>
+            </>
           )}
         </div>
       )}
